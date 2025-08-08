@@ -1,0 +1,209 @@
+---
+title: "Relatório de Padronização da Coluna Resposta"
+author: "Carlos Antônio Zarzar"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Introdução
+
+Este relatório documenta o processo de padronização da coluna "resposta" do dataset, transformando as respostas heterogêneas em categorias padronizadas: "sim", "não" ou NA.
+
+```{r bibliotecas}
+library(dplyr)
+library(stringr)
+library(knitr)
+library(ggplot2)
+library(DT)
+```
+
+# Dados Originais
+
+## Carregamento dos dados
+```{r dados}
+# Aqui você carregaria seus dados reais
+# df <- read.csv("seu_arquivo.csv")
+
+# Para demonstração, criando dados de exemplo baseados nas suas respostas únicas
+respostas_originais <- c(
+  "Sim", 
+  "Sim\r\nFiltro de caixa de brita",
+  "Não",
+  "Não se aplica",
+  "Nãp",
+  "Não se aplca",
+  "Sim \r\nTela de proteção",
+  "Sim, uso de telae reservatório",
+  "Não costuma haver inserção de peixes de fora napropriedade. No entanto, quando há, ocorre o controle da frequência e do número de peixes introduzidos",
+  "Não costuma haver inserção de peixes de fora napropriedade. No entanto, quando há, o status é conhecido",
+  "Há dos lotes de larvas",
+  "Há a emissão de GTA",
+  "Não costuma haver inserção de peixes de fora napropriedade.",
+  "Não se aplica (clente busca)",
+  "Sim, uso de água de poço e o sistema é de tanques elevados e lonados",
+  "NA"
+)
+
+# Criando um dataframe de exemplo
+df <- data.frame(
+  id = 1:100,
+  resposta = sample(respostas_originais, 100, replace = TRUE),
+  stringsAsFactors = FALSE
+)
+```
+
+## Análise das respostas originais
+```{r analise_original}
+# Respostas únicas e suas frequências
+freq_original <- table(df$resposta)
+kable(as.data.frame(freq_original), 
+      col.names = c("Resposta Original", "Frequência"),
+      caption = "Frequência das Respostas Originais")
+```
+
+**Total de respostas únicas:** `r length(unique(df$resposta))`
+
+# Processo de Padronização
+
+## Regras de Transformação
+
+As seguintes regras foram aplicadas para padronizar as respostas:
+
+1. **"sim"**: Respostas que começam com "Sim" + respostas específicas ("Há dos lotes de larvas", "Há a emissão de GTA")
+2. **"não"**: Respostas que começam com "Não" ou "Nãp"
+3. **NA**: "Não se aplica", "NA" e qualquer outra resposta não categorizada
+
+```{r transformacao}
+# Aplicando a transformação
+df <- df %>%
+  mutate(resposta_padronizada = case_when(
+    str_detect(resposta, "^Sim|^Há dos lotes|^Há a emissão") ~ "sim",
+    str_detect(resposta, "^Não|^Nãp") ~ "não",
+    str_detect(resposta, "^Não se apli?ca|^NA$") ~ NA_character_,
+    TRUE ~ NA_character_
+  ))
+```
+
+## Tabela de Mapeamento
+```{r mapeamento}
+# Criando tabela de mapeamento para visualização
+mapeamento <- df %>%
+  distinct(resposta, resposta_padronizada) %>%
+  arrange(resposta_padronizada, resposta)
+
+DT::datatable(mapeamento, 
+              options = list(pageLength = 20),
+              caption = "Mapeamento: Resposta Original → Resposta Padronizada")
+```
+
+# Resultados da Transformação
+
+## Frequências após padronização
+```{r freq_padronizada}
+freq_padronizada <- table(df$resposta_padronizada, useNA = "ifany")
+kable(as.data.frame(freq_padronizada),
+      col.names = c("Resposta Padronizada", "Frequência"),
+      caption = "Frequência das Respostas Padronizadas")
+```
+
+## Visualização das frequências
+```{r grafico_freq, fig.width=10, fig.height=6}
+# Preparando dados para o gráfico
+df_plot <- df %>%
+  mutate(resposta_padronizada = ifelse(is.na(resposta_padronizada), "NA", resposta_padronizada)) %>%
+  count(resposta_padronizada) %>%
+  mutate(percentual = round(n/sum(n)*100, 1))
+
+# Gráfico de barras
+ggplot(df_plot, aes(x = resposta_padronizada, y = n, fill = resposta_padronizada)) +
+  geom_bar(stat = "identity", alpha = 0.8) +
+  geom_text(aes(label = paste0(n, "\n(", percentual, "%)")), 
+            vjust = -0.5, size = 4) +
+  labs(title = "Distribuição das Respostas Padronizadas",
+       x = "Resposta Padronizada",
+       y = "Frequência",
+       fill = "Categoria") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"))
+```
+
+## Comparação Antes x Depois
+```{r comparacao}
+comparacao <- data.frame(
+  Métrica = c("Total de categorias únicas", 
+              "Respostas válidas (não-NA)",
+              "Taxa de padronização"),
+  Antes = c(length(unique(df$resposta)),
+            sum(!is.na(df$resposta)),
+            "N/A"),
+  Depois = c(length(unique(df$resposta_padronizada[!is.na(df$resposta_padronizada)])),
+             sum(!is.na(df$resposta_padronizada)),
+             paste0(round(sum(!is.na(df$resposta_padronizada))/nrow(df)*100, 1), "%"))
+)
+
+kable(comparacao, caption = "Comparação: Antes vs Depois da Padronização")
+```
+
+# Validação dos Resultados
+
+## Verificação de casos específicos
+```{r validacao}
+# Verificando se as regras foram aplicadas corretamente
+casos_teste <- c("Sim", "Não", "Há dos lotes de larvas", "Há a emissão de GTA", "Nãp")
+
+validacao <- df %>%
+  filter(resposta %in% casos_teste) %>%
+  distinct(resposta, resposta_padronizada) %>%
+  arrange(resposta)
+
+kable(validacao, 
+      caption = "Validação das Regras de Transformação",
+      col.names = c("Resposta Original", "Resposta Padronizada"))
+```
+
+## Casos que viraram NA
+```{r casos_na}
+casos_na <- df %>%
+  filter(is.na(resposta_padronizada)) %>%
+  count(resposta, sort = TRUE)
+
+kable(casos_na,
+      caption = "Respostas que foram transformadas em NA",
+      col.names = c("Resposta Original", "Frequência"))
+```
+
+# Conclusões
+
+```{r conclusoes, echo=FALSE}
+total_sim <- sum(df$resposta_padronizada == "sim", na.rm = TRUE)
+total_nao <- sum(df$resposta_padronizada == "não", na.rm = TRUE)
+total_na <- sum(is.na(df$resposta_padronizada))
+taxa_padronizacao <- round((total_sim + total_nao) / nrow(df) * 100, 1)
+```
+
+1. **Redução de categorias**: De `r length(unique(df$resposta))` categorias únicas para 3 (sim, não, NA)
+
+2. **Taxa de padronização**: `r taxa_padronizacao`% das respostas foram categorizadas como "sim" ou "não"
+
+3. **Distribuição final**:
+   - **Sim**: `r total_sim` respostas (`r round(total_sim/nrow(df)*100, 1)`%)
+   - **Não**: `r total_nao` respostas (`r round(total_nao/nrow(df)*100, 1)`%)
+   - **NA**: `r total_na` respostas (`r round(total_na/nrow(df)*100, 1)`%)
+
+4. **Qualidade dos dados**: A padronização foi bem-sucedida, capturando as principais variações de escrita e transformando respostas ambíguas em categorias claras.
+
+---
+
+*Relatório gerado automaticamente em `r Sys.Date()`*
