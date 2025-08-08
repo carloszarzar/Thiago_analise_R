@@ -1,315 +1,333 @@
 # ===============================================================================
-# VISUALIZAÇÕES GRÁFICAS - ANÁLISE DE BIOSSEGURANÇA EM AQUICULTURA
+# ANÁLISE ESTATÍSTICA - QUESTIONÁRIO DE BIOSSEGURANÇA EM AQUICULTURA
 # ===============================================================================
 
-library(ggplot2)
+# Carregando bibliotecas necessárias
+library(tidyverse)
+library(corrplot)
+library(pheatmap)
 library(gridExtra)
-library(RColorBrewer)
-library(viridis)
-
-# Definir tema personalizado
-tema_personalizado <- theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-    plot.subtitle = element_text(hjust = 0.5, size = 11),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "bottom",
-    panel.grid.minor = element_blank()
-  )
-
-# Paleta de cores
-cores_grupos <- c("G1" = "#2E86AB", "G2" = "#A23B72", "G3" = "#F18F01", "G4" = "#C73E1D")
-cores_propriedades <- viridis::viridis(5, option = "D")
+library(knitr)
+library(kableExtra)
 
 # ===============================================================================
-# GRÁFICO 1: DISTRIBUIÇÃO GERAL DE RESPOSTAS
+# 1. CARREGAMENTO E PREPARAÇÃO DOS DADOS
 # ===============================================================================
 
-p1 <- df %>%
-  filter(!is.na(resposta_padronizada)) %>%
-  count(resposta_padronizada) %>%
-  mutate(
-    percentual = round(n/sum(n)*100, 1),
-    resposta_padronizada = str_to_title(resposta_padronizada)
-  ) %>%
-  ggplot(aes(x = reorder(resposta_padronizada, n), y = n, fill = resposta_padronizada)) +
-  geom_col(alpha = 0.8, width = 0.7) +
-  geom_text(aes(label = paste0(n, "\n(", percentual, "%)")),
-            vjust = -0.3, fontface = "bold", size = 4) +
-  scale_fill_manual(values = c("Sim" = "#2E8B57", "Não" = "#CD5C5C", "NA" = "#708090")) +
-  labs(
-    title = "Distribuição Geral das Respostas",
-    subtitle = "Frequência e percentual de cada tipo de resposta",
-    x = "Tipo de Resposta",
-    y = "Frequência",
-    fill = "Resposta"
-  ) +
-  tema_personalizado +
-  theme(legend.position = "none")
+# Assumindo que seus dados estão no dataframe 'df'
+# Se não estiverem carregados, descomente e ajuste a linha abaixo:
+# df <- read.csv("seu_arquivo.csv")
 
-print(p1)
+# Verificar estrutura dos dados
+print("Estrutura dos dados:")
+str(df)
+print("\nPrimeiras linhas:")
+head(df, 10)
+
+# Verificar valores únicos em cada coluna
+print("\nValores únicos por coluna:")
+sapply(df, function(x) unique(x))
 
 # ===============================================================================
-# GRÁFICO 2: PROPORÇÃO DE "SIM" POR GRUPO
+# 2. ANÁLISE DESCRITIVA GERAL
 # ===============================================================================
 
-dados_grupo_sim <- df %>%
+# Resumo geral dos dados
+print("\n=== RESUMO GERAL DOS DADOS ===")
+print(paste("Total de observações:", nrow(df)))
+print(paste("Número de entrevistados:", length(unique(df$entrevistado))))
+print(paste("Número de grupos:", length(unique(df$grupo))))
+
+# Contagem de perguntas por grupo
+perguntas_por_grupo <- df %>%
   group_by(grupo) %>%
   summarise(
-    total = n(),
-    sim = sum(resposta_padronizada == "sim", na.rm = TRUE),
-    prop_sim = sim/total*100,
+    total_perguntas = n_distinct(pergunta),
+    total_respostas = n(),
     .groups = 'drop'
-  ) %>%
-  mutate(
-    grupo_nome = case_when(
-      grupo == "G1" ~ "G1: Avaliação de Riscos",
-      grupo == "G2" ~ "G2: Equipamentos e Veículos",
-      grupo == "G3" ~ "G3: Qualidade da Água",
-      grupo == "G4" ~ "G4: Gerenciamento de Riscos"
-    )
   )
 
-p2 <- dados_grupo_sim %>%
-  ggplot(aes(x = reorder(grupo_nome, prop_sim), y = prop_sim, fill = grupo)) +
-  geom_col(alpha = 0.8, width = 0.7) +
-  geom_text(aes(label = paste0(round(prop_sim, 1), "%")),
-            hjust = -0.1, fontface = "bold", size = 4) +
-  scale_fill_manual(values = cores_grupos) +
-  coord_flip() +
-  labs(
-    title = "Conformidade por Grupo de Perguntas",
-    subtitle = "Percentual de respostas 'Sim' por categoria",
-    x = "Grupo de Perguntas",
-    y = "Conformidade (%)",
-    fill = "Grupo"
-  ) +
-  tema_personalizado +
-  theme(legend.position = "none") +
-  ylim(0, max(dados_grupo_sim$prop_sim) * 1.1)
+print("\nPerguntas por grupo:")
+print(perguntas_por_grupo)
 
-print(p2)
+# Distribuição de respostas padronizadas
+distribuicao_respostas <- df %>%
+  count(resposta_padronizada, name = "frequencia") %>%
+  mutate(percentual = round(frequencia/sum(frequencia)*100, 2)) %>%
+  arrange(desc(frequencia))
+
+print("\nDistribuição geral de respostas:")
+print(distribuicao_respostas)
 
 # ===============================================================================
-# GRÁFICO 3: CONFORMIDADE POR PROPRIEDADE
+# 3. ANÁLISE POR GRUPO DE PERGUNTAS
 # ===============================================================================
 
-dados_prop_sim <- df %>%
+print("\n=== ANÁLISE POR GRUPO ===")
+
+# Distribuição de respostas por grupo
+respostas_por_grupo <- df %>%
+  group_by(grupo, resposta_padronizada) %>%
+  summarise(frequencia = n(), .groups = 'drop') %>%
+  group_by(grupo) %>%
+  mutate(
+    total_grupo = sum(frequencia),
+    percentual = round(frequencia/total_grupo*100, 2)
+  ) %>%
+  arrange(grupo, desc(frequencia))
+
+print("Distribuição de respostas por grupo:")
+print(respostas_por_grupo)
+
+# Proporção de "sim" por grupo
+prop_sim_grupo <- df %>%
+  group_by(grupo) %>%
+  summarise(
+    total_respostas = n(),
+    respostas_sim = sum(resposta_padronizada == "sim", na.rm = TRUE),
+    prop_sim = round(respostas_sim/total_respostas*100, 2),
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(prop_sim))
+
+print("\nProporção de respostas 'Sim' por grupo:")
+print(prop_sim_grupo)
+
+# ===============================================================================
+# 4. ANÁLISE POR PROPRIEDADE (ENTREVISTADO)
+# ===============================================================================
+
+print("\n=== ANÁLISE POR PROPRIEDADE ===")
+
+# Distribuição de respostas por entrevistado
+respostas_por_entrevistado <- df %>%
+  group_by(entrevistado, resposta_padronizada) %>%
+  summarise(frequencia = n(), .groups = 'drop') %>%
+  group_by(entrevistado) %>%
+  mutate(
+    total_entrevistado = sum(frequencia),
+    percentual = round(frequencia/total_entrevistado*100, 2)
+  ) %>%
+  arrange(entrevistado, desc(frequencia))
+
+print("Distribuição de respostas por propriedade:")
+print(respostas_por_entrevistado)
+
+# Proporção de "sim" por propriedade
+prop_sim_propriedade <- df %>%
   group_by(entrevistado) %>%
   summarise(
-    total = n(),
-    sim = sum(resposta_padronizada == "sim", na.rm = TRUE),
-    prop_sim = sim/total*100,
+    total_respostas = n(),
+    respostas_sim = sum(resposta_padronizada == "sim", na.rm = TRUE),
+    prop_sim = round(respostas_sim/total_respostas*100, 2),
     .groups = 'drop'
   ) %>%
-  mutate(
-    propriedade = case_when(
-      entrevistado == 1 ~ "Propriedade A",
-      entrevistado == 2 ~ "Propriedade B",
-      entrevistado == 3 ~ "Propriedade C",
-      entrevistado == 4 ~ "Propriedade D",
-      entrevistado == 5 ~ "Propriedade E"
-    )
-  )
+  arrange(desc(prop_sim))
 
-p3 <- dados_prop_sim %>%
-  ggplot(aes(x = reorder(propriedade, prop_sim), y = prop_sim, fill = propriedade)) +
-  geom_col(alpha = 0.8, width = 0.7) +
-  geom_text(aes(label = paste0(round(prop_sim, 1), "%")),
-            vjust = -0.3, fontface = "bold", size = 4) +
-  scale_fill_manual(values = cores_propriedades) +
-  labs(
-    title = "Ranking de Conformidade das Propriedades",
-    subtitle = "Percentual de respostas 'Sim' por propriedade",
-    x = "Propriedade",
-    y = "Conformidade (%)",
-    fill = "Propriedade"
-  ) +
-  tema_personalizado +
-  theme(legend.position = "none") +
-  ylim(0, max(dados_prop_sim$prop_sim) * 1.1)
+print("\nProporção de respostas 'Sim' por propriedade:")
+print(prop_sim_propriedade)
 
-print(p3)
+# Ranking das propriedades por conformidade
+propriedades_labels <- c("1" = "Propriedade A", "2" = "Propriedade B",
+                         "3" = "Propriedade C", "4" = "Propriedade D",
+                         "5" = "Propriedade E")
+
+prop_sim_propriedade_labeled <- prop_sim_propriedade %>%
+  mutate(propriedade = propriedades_labels[as.character(entrevistado)]) %>%
+  select(propriedade, prop_sim) %>%
+  arrange(desc(prop_sim))
+
+print("\nRanking de conformidade por propriedade:")
+print(prop_sim_propriedade_labeled)
 
 # ===============================================================================
-# GRÁFICO 4: HEATMAP - CONFORMIDADE POR PROPRIEDADE E GRUPO
+# 5. ANÁLISE CRUZADA: GRUPO vs PROPRIEDADE
 # ===============================================================================
 
-dados_heatmap <- df %>%
+print("\n=== ANÁLISE CRUZADA ===")
+
+# Tabela de contingência: proporção de "sim" por grupo e propriedade
+tabela_cruzada <- df %>%
   group_by(entrevistado, grupo) %>%
   summarise(
-    prop_sim = mean(resposta_padronizada == "sim", na.rm = TRUE) * 100,
+    total = n(),
+    sim = sum(resposta_padronizada == "sim", na.rm = TRUE),
+    prop_sim = round(sim/total*100, 2),
     .groups = 'drop'
   ) %>%
-  mutate(
-    propriedade = case_when(
-      entrevistado == 1 ~ "Propriedade A",
-      entrevistado == 2 ~ "Propriedade B",
-      entrevistado == 3 ~ "Propriedade C",
-      entrevistado == 4 ~ "Propriedade D",
-      entrevistado == 5 ~ "Propriedade E"
-    ),
-    grupo_nome = case_when(
-      grupo == "G1" ~ "Avaliação de Riscos",
-      grupo == "G2" ~ "Equipamentos e Veículos",
-      grupo == "G3" ~ "Qualidade da Água",
-      grupo == "G4" ~ "Gerenciamento de Riscos"
-    )
+  select(entrevistado, grupo, prop_sim) %>%
+  pivot_wider(names_from = grupo, values_from = prop_sim)
+
+print("Tabela cruzada: % de respostas 'Sim' por propriedade e grupo:")
+print(tabela_cruzada)
+
+# Identificar pontos fortes e fracos por propriedade
+analise_pontos <- df %>%
+  group_by(entrevistado, grupo) %>%
+  summarise(
+    prop_sim = round(mean(resposta_padronizada == "sim", na.rm = TRUE)*100, 2),
+    .groups = 'drop'
+  ) %>%
+  group_by(entrevistado) %>%
+  summarise(
+    melhor_grupo = grupo[which.max(prop_sim)],
+    melhor_score = max(prop_sim),
+    pior_grupo = grupo[which.min(prop_sim)],
+    pior_score = min(prop_sim),
+    diferenca = melhor_score - pior_score,
+    .groups = 'drop'
   )
 
-p4 <- dados_heatmap %>%
-  ggplot(aes(x = grupo_nome, y = propriedade, fill = prop_sim)) +
-  geom_tile(color = "white", linewidth = 1) +
-  geom_text(aes(label = paste0(round(prop_sim, 1), "%")),
-            fontface = "bold", size = 3.5, color = "white") +
-  scale_fill_gradient2(
-    low = "#CD5C5C", mid = "#FFD700", high = "#2E8B57",
-    midpoint = 50,
-    name = "Conformidade\n(%)"
-  ) +
-  labs(
-    title = "Mapa de Calor: Conformidade por Propriedade e Grupo",
-    subtitle = "Percentual de respostas 'Sim' para cada combinação",
-    x = "Grupo de Perguntas",
-    y = "Propriedade"
-  ) +
-  tema_personalizado +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.grid = element_blank()
-  )
-
-print(p4)
+print("\nPontos fortes e fracos por propriedade:")
+for(i in 1:nrow(analise_pontos)) {
+  prop <- propriedades_labels[as.character(analise_pontos$entrevistado[i])]
+  print(paste(prop, ":"))
+  print(paste("  Melhor grupo:", analise_pontos$melhor_grupo[i],
+              "(", analise_pontos$melhor_score[i], "%)"))
+  print(paste("  Pior grupo:", analise_pontos$pior_grupo[i],
+              "(", analise_pontos$pior_score[i], "%)"))
+  print(paste("  Diferença:", analise_pontos$diferenca[i], "%"))
+  print("")
+}
 
 # ===============================================================================
-# GRÁFICO 5: DISTRIBUIÇÃO DE RESPOSTAS POR GRUPO (STACKED BAR)
+# 6. TESTES ESTATÍSTICOS
 # ===============================================================================
 
-dados_stack <- df %>%
+print("\n=== TESTES ESTATÍSTICOS ===")
+
+# Preparar dados para testes
+df_teste <- df %>%
   filter(!is.na(resposta_padronizada)) %>%
-  group_by(grupo, resposta_padronizada) %>%
-  summarise(n = n(), .groups = 'drop') %>%
-  group_by(grupo) %>%
   mutate(
-    total = sum(n),
-    prop = n/total*100,
-    grupo_nome = case_when(
-      grupo == "G1" ~ "G1: Avaliação\nde Riscos",
-      grupo == "G2" ~ "G2: Equipamentos\ne Veículos",
-      grupo == "G3" ~ "G3: Qualidade\nda Água",
-      grupo == "G4" ~ "G4: Gerenciamento\nde Riscos"
-    )
+    resposta_binaria = ifelse(resposta_padronizada == "sim", 1, 0)
   )
 
-p5 <- dados_stack %>%
-  ggplot(aes(x = grupo_nome, y = prop, fill = str_to_title(resposta_padronizada))) +
-  geom_col(alpha = 0.8) +
-  geom_text(aes(label = ifelse(prop > 5, paste0(round(prop, 1), "%"), "")),
-            position = position_stack(vjust = 0.5),
-            fontface = "bold", size = 3, color = "white") +
-  scale_fill_manual(values = c("Sim" = "#2E8B57", "Não" = "#CD5C5C", "NA" = "#708090")) +
-  labs(
-    title = "Distribuição de Respostas por Grupo",
-    subtitle = "Proporção de cada tipo de resposta em cada categoria",
-    x = "Grupo de Perguntas",
-    y = "Proporção (%)",
-    fill = "Tipo de Resposta"
-  ) +
-  tema_personalizado
+# Teste Qui-quadrado: Independência entre grupos e respostas
+if(length(unique(df_teste$resposta_padronizada)) > 1 &&
+   length(unique(df_teste$grupo)) > 1) {
 
-print(p5)
+  tabela_contingencia <- table(df_teste$grupo, df_teste$resposta_padronizada)
+  print("Tabela de contingência - Grupo vs Resposta:")
+  print(tabela_contingencia)
 
-# ===============================================================================
-# GRÁFICO 6: VARIABILIDADE ENTRE PROPRIEDADES POR GRUPO
-# ===============================================================================
+  teste_qui_grupo <- chisq.test(tabela_contingencia)
+  print("\nTeste Qui-quadrado - Grupo vs Resposta:")
+  print(teste_qui_grupo)
+}
 
-dados_variabilidade <- df %>%
+# Teste Qui-quadrado: Independência entre propriedades e respostas
+if(length(unique(df_teste$resposta_padronizada)) > 1 &&
+   length(unique(df_teste$entrevistado)) > 1) {
+
+  tabela_contingencia_prop <- table(df_teste$entrevistado, df_teste$resposta_padronizada)
+  print("\nTabela de contingência - Propriedade vs Resposta:")
+  print(tabela_contingencia_prop)
+
+  teste_qui_prop <- chisq.test(tabela_contingencia_prop)
+  print("\nTeste Qui-quadrado - Propriedade vs Resposta:")
+  print(teste_qui_prop)
+}
+
+# ANOVA para comparar médias de conformidade entre grupos
+modelo_anova <- df_teste %>%
   group_by(entrevistado, grupo) %>%
-  summarise(prop_sim = mean(resposta_padronizada == "sim", na.rm = TRUE) * 100, .groups = 'drop') %>%
-  mutate(
-    propriedade = paste("Prop.", LETTERS[entrevistado]),
-    grupo_nome = case_when(
-      grupo == "G1" ~ "G1: Avaliação de Riscos",
-      grupo == "G2" ~ "G2: Equipamentos e Veículos",
-      grupo == "G3" ~ "G3: Qualidade da Água",
-      grupo == "G4" ~ "G4: Gerenciamento de Riscos"
-    )
-  )
+  summarise(prop_sim = mean(resposta_binaria, na.rm = TRUE), .groups = 'drop')
 
-p6 <- dados_variabilidade %>%
-  ggplot(aes(x = grupo_nome, y = prop_sim, color = propriedade, group = propriedade)) +
-  geom_line(linewidth = 1.2, alpha = 0.7) +
-  geom_point(size = 3, alpha = 0.8) +
-  scale_color_manual(values = cores_propriedades) +
-  labs(
-    title = "Perfil de Conformidade das Propriedades",
-    subtitle = "Variação da conformidade entre grupos para cada propriedade",
-    x = "Grupo de Perguntas",
-    y = "Conformidade (%)",
-    color = "Propriedade"
-  ) +
-  tema_personalizado +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylim(0, 100)
+if(nrow(modelo_anova) > 0) {
+  anova_grupos <- aov(prop_sim ~ grupo, data = modelo_anova)
+  print("\nANOVA - Diferenças entre grupos:")
+  print(summary(anova_grupos))
 
-print(p6)
+  # Teste post-hoc (Tukey)
+  if(summary(anova_grupos)[[1]][["Pr(>F)"]][1] < 0.05) {
+    tukey_test <- TukeyHSD(anova_grupos)
+    print("\nTeste Tukey HSD (comparações múltiplas):")
+    print(tukey_test)
+  }
+}
 
 # ===============================================================================
-# GRÁFICO 7: BOX PLOT - DISTRIBUIÇÃO DE CONFORMIDADE POR GRUPO
+# 7. IDENTIFICAÇÃO DE PADRÕES CRÍTICOS
 # ===============================================================================
 
-dados_boxplot <- df %>%
-  group_by(entrevistado, grupo) %>%
-  summarise(prop_sim = mean(resposta_padronizada == "sim", na.rm = TRUE) * 100, .groups = 'drop') %>%
-  mutate(
-    grupo_nome = case_when(
-      grupo == "G1" ~ "G1: Avaliação\nde Riscos",
-      grupo == "G2" ~ "G2: Equipamentos\ne Veículos",
-      grupo == "G3" ~ "G3: Qualidade\nda Água",
-      grupo == "G4" ~ "G4: Gerenciamento\nde Riscos"
-    )
-  )
+print("\n=== IDENTIFICAÇÃO DE PADRÕES CRÍTICOS ===")
 
-p7 <- dados_boxplot %>%
-  ggplot(aes(x = grupo_nome, y = prop_sim, fill = grupo)) +
-  geom_boxplot(alpha = 0.7, width = 0.6) +
-  geom_jitter(aes(color = grupo), alpha = 0.8, width = 0.2, size = 3) +
-  scale_fill_manual(values = cores_grupos) +
-  scale_color_manual(values = cores_grupos) +
-  labs(
-    title = "Distribuição de Conformidade por Grupo",
-    subtitle = "Box plots mostrando variabilidade entre propriedades",
-    x = "Grupo de Perguntas",
-    y = "Conformidade (%)",
-    fill = "Grupo",
-    color = "Grupo"
-  ) +
-  tema_personalizado +
-  theme(legend.position = "none") +
-  ylim(0, 100)
+# Perguntas com maior taxa de "não" ou "NA"
+perguntas_criticas <- df %>%
+  group_by(grupo, pergunta) %>%
+  summarise(
+    total = n(),
+    nao = sum(resposta_padronizada == "não", na.rm = TRUE),
+    na_vals = sum(is.na(resposta_padronizada) | resposta_padronizada == "NA"),
+    prop_problematica = round((nao + na_vals)/total*100, 2),
+    .groups = 'drop'
+  ) %>%
+  filter(prop_problematica >= 40) %>%  # Perguntas com 40%+ de problemas
+  arrange(desc(prop_problematica))
 
-print(p7)
+print("Perguntas mais críticas (≥40% de 'não' ou 'NA'):")
+if(nrow(perguntas_criticas) > 0) {
+  print(perguntas_criticas)
+} else {
+  print("Não foram encontradas perguntas críticas com esse critério.")
+}
 
-# ===============================================================================
-# DASHBOARD RESUMO
-# ===============================================================================
+# Propriedades com baixa conformidade geral
+propriedades_criticas <- prop_sim_propriedade %>%
+  filter(prop_sim < 70) %>%  # Menos de 70% de conformidade
+  arrange(prop_sim)
 
-# Criar painel com 4 gráficos principais
-dashboard <- grid.arrange(
-  p1 + theme(plot.title = element_text(size = 10)),
-  p2 + theme(plot.title = element_text(size = 10)),
-  p3 + theme(plot.title = element_text(size = 10)),
-  p4 + theme(plot.title = element_text(size = 10)),
-  ncol = 2, nrow = 2,
-  top = "DASHBOARD - ANÁLISE DE BIOSSEGURANÇA EM AQUICULTURA"
-)
-
-print(dashboard)
+print("\nPropriedades com conformidade <70%:")
+if(nrow(propriedades_criticas) > 0) {
+  for(i in 1:nrow(propriedades_criticas)) {
+    prop_name <- propriedades_labels[as.character(propriedades_criticas$entrevistado[i])]
+    print(paste(prop_name, ":", propriedades_criticas$prop_sim[i], "%"))
+  }
+} else {
+  print("Todas as propriedades têm conformidade ≥70%.")
+}
 
 # ===============================================================================
-# EXPORTAÇÃO DOS GRÁFICOS (opcional)
+# 8. RELATÓRIO EXECUTIVO
 # ===============================================================================
 
-# Salvar gráficos individualmente (descomente se necessário)
-# ggsave("distribuicao_geral.png", p1, width = 10, height = 6, dpi = 300)
-# ggsave("conformidade_grupos.png", p2, width = 10, height
+print("\n" , rep("=", 80))
+print("RELATÓRIO EXECUTIVO")
+print(rep("=", 80))
+
+# Conformidade geral
+conformidade_geral <- round(mean(df$resposta_padronizada == "sim", na.rm = TRUE)*100, 2)
+print(paste("CONFORMIDADE GERAL:", conformidade_geral, "%"))
+
+# Melhor e pior grupo
+melhor_grupo <- prop_sim_grupo$grupo[1]
+melhor_score_grupo <- prop_sim_grupo$prop_sim[1]
+pior_grupo <- prop_sim_grupo$grupo[nrow(prop_sim_grupo)]
+pior_score_grupo <- prop_sim_grupo$prop_sim[nrow(prop_sim_grupo)]
+
+print(paste("MELHOR GRUPO:", melhor_grupo, "(", melhor_score_grupo, "%)"))
+print(paste("PIOR GRUPO:", pior_grupo, "(", pior_score_grupo, "%)"))
+
+# Melhor e pior propriedade
+melhor_propriedade <- propriedades_labels[as.character(prop_sim_propriedade$entrevistado[1])]
+melhor_score_prop <- prop_sim_propriedade$prop_sim[1]
+pior_propriedade <- propriedades_labels[as.character(prop_sim_propriedade$entrevistado[nrow(prop_sim_propriedade)])]
+pior_score_prop <- prop_sim_propriedade$prop_sim[nrow(prop_sim_propriedade)]
+
+print(paste("MELHOR PROPRIEDADE:", melhor_propriedade, "(", melhor_score_prop, "%)"))
+print(paste("PIOR PROPRIEDADE:", pior_propriedade, "(", pior_score_prop, "%)"))
+
+# Variabilidade entre propriedades
+variabilidade <- round(sd(prop_sim_propriedade$prop_sim), 2)
+print(paste("VARIABILIDADE ENTRE PROPRIEDADES (desvio padrão):", variabilidade, "%"))
+
+print("\nCONCLUSÕES PRINCIPAIS:")
+print("1. Análise de conformidade por grupo de perguntas concluída")
+print("2. Comparação entre propriedades realizada")
+print("3. Identificação de pontos críticos finalizada")
+print("4. Testes estatísticos aplicados")
+
+print("\nPROSSEGUIR COM VISUALIZAÇÕES GRÁFICAS? Execute o próximo bloco de código.")
+
+print(rep("=", 80))

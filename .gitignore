@@ -1,0 +1,33 @@
+# Arquivos e diretórios de projeto do RStudio
+*.Rproj
+.Rproj.user/
+
+# Dados temporários e históricos
+.Rhistory
+.RData
+.Ruserdata
+
+# Diretórios de cache e pacotes
+.Rcache/
+__pycache__/
+*.Rcheck/
+
+# Saídas temporárias e relatórios gerados
+*.html
+*.pdf
+*.docx
+
+# Dados brutos grandes ou sensíveis (descomente se necessário)
+# data-raw/
+# *.csv
+# *.tsv
+
+# Arquivos de compilação
+*.o
+*.so
+*.dll
+
+# Ambiente do R
+.Renviron
+.Rprofile
+
