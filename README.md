@@ -1,5 +1,3 @@
- *💡 **Para Recrutadores**: Este projeto demonstra capacidade completa em análise de dados quantitativa, desde coleta e tratamento até insights acionáveis, utilizando as melhores práticas da ciência de dados moderna.*
-
 # 📊 Análise Estatística de Biossegurança em Propriedades de Aquicultura
 
 [![R](https://img.shields.io/badge/R-4.0+-blue.svg)](https://www.r-project.org/)
