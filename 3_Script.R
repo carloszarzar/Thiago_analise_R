@@ -216,6 +216,10 @@ if(length(unique(df_teste$resposta_padronizada)) > 1 &&
   print(teste_qui_grupo)
 }
 
+# O valor de p em um teste qui-quadrado de independência mede a probabilidade de obter resultados tão extremos quanto os observados, assumindo que as variáveis são independentes. Um valor de p pequeno (tipicamente menor que o nível de significância, como 0,05) indica evidências contra a hipótese de independência, sugerindo que as variáveis estão relacionadas.
+# Portanto o teste Qui-quadrado de Independência entre grupos de perguntas e as respostas obtidas NÂO estão relacionadas
+
+
 # Teste Qui-quadrado: Independência entre propriedades e respostas
 if(length(unique(df_teste$resposta_padronizada)) > 1 &&
    length(unique(df_teste$entrevistado)) > 1) {
@@ -228,6 +232,10 @@ if(length(unique(df_teste$resposta_padronizada)) > 1 &&
   print("\nTeste Qui-quadrado - Propriedade vs Resposta:")
   print(teste_qui_prop)
 }
+
+# Portanto o teste Qui-quadrado de Independência entre Proprietários e as respostas obtidas
+# no questionário tem alguma relação, ou seja, existe uma dependência.
+
 
 # ANOVA para comparar médias de conformidade entre grupos
 modelo_anova <- df_teste %>%
@@ -246,6 +254,8 @@ if(nrow(modelo_anova) > 0) {
     print(tukey_test)
   }
 }
+
+# Não há diferença entre os grupos de perguntas para a proporção de sim nas respostas do questionário.
 
 # ===============================================================================
 # 7. IDENTIFICAÇÃO DE PADRÕES CRÍTICOS
@@ -292,9 +302,9 @@ if(nrow(propriedades_criticas) > 0) {
 # 8. RELATÓRIO EXECUTIVO
 # ===============================================================================
 
-print("\n" , rep("=", 80))
+print(strrep("=", 80))
 print("RELATÓRIO EXECUTIVO")
-print(rep("=", 80))
+print(strrep("=", 80))
 
 # Conformidade geral
 conformidade_geral <- round(mean(df$resposta_padronizada == "sim", na.rm = TRUE)*100, 2)
@@ -324,10 +334,10 @@ print(paste("VARIABILIDADE ENTRE PROPRIEDADES (desvio padrão):", variabilidade,
 
 print("\nCONCLUSÕES PRINCIPAIS:")
 print("1. Análise de conformidade por grupo de perguntas concluída")
-print("2. Comparação entre propriedades realizada")
+print("2. Comparação entre proprietários realizada")
 print("3. Identificação de pontos críticos finalizada")
 print("4. Testes estatísticos aplicados")
 
-print("\nPROSSEGUIR COM VISUALIZAÇÕES GRÁFICAS? Execute o próximo bloco de código.")
+print("PROSSEGUIR COM VISUALIZAÇÕES GRÁFICAS? Execute o próximo bloco de código.")
 
-print(rep("=", 80))
+print(strrep("=", 80))

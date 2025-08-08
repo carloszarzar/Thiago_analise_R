@@ -1,0 +1,506 @@
+---
+title: "Análise Estatística de Biossegurança em Propriedades de Aquicultura"
+subtitle: "Avaliação da Conformidade em Práticas de Manejo e Prevenção"
+author: "Sua Nome"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+output: 
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+    number_sections: true
+    fig_caption: true
+    fig_width: 10
+    fig_height: 6
+  pdf_document:
+    toc: true
+    number_sections: true
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  message = FALSE, 
+  warning = FALSE,
+  fig.align = 'center',
+  fig.width = 10,
+  fig.height = 6
+)
+
+# Carregamento de bibliotecas
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(gridExtra)
+library(corrplot)
+library(viridis)
+library(RColorBrewer)
+
+# Configurações de tema
+tema_personalizado <- theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+
+# Paletas de cores
+cores_grupos <- c("G1" = "#2E86AB", "G2" = "#A23B72", "G3" = "#F18F01", "G4" = "#C73E1D")
+cores_propriedades <- viridis::viridis(5, option = "D")
+
+# Carregamento dos dados
+# SUBSTITUA PELO CAMINHO DO SEU ARQUIVO:
+# df <- read.csv("seus_dados.csv")
+# 
+# Para demonstração, vamos assumir que os dados já estão carregados como 'df'
+```
+
+# Resumo Executivo
+
+Este relatório apresenta uma análise estatística abrangente dos dados de conformidade em biossegurança coletados em cinco propriedades de aquicultura. O questionário avaliou quatro dimensões críticas: **Avaliação de Riscos (G1)**, **Equipamentos e Veículos (G2)**, **Qualidade da Água (G3)** e **Gerenciamento de Riscos (G4)**.
+
+## Principais Achados
+
+**[PREENCHA AQUI COM OS RESULTADOS PRINCIPAIS]**
+
+- **Conformidade Geral:** XX% das respostas foram positivas
+- **Melhor Grupo:** GX (XX%)
+- **Pior Grupo:** GX (XX%)
+- **Melhor Propriedade:** Propriedade X (XX%)
+- **Pior Propriedade:** Propriedade X (XX%)
+- **Variabilidade entre propriedades:** XX% (desvio padrão)
+
+# Metodologia
+
+## Coleta de Dados
+
+Os dados foram coletados através de questionário estruturado aplicado em cinco propriedades de aquicultura (denominadas A, B, C, D e E), abrangendo quatro grupos temáticos:
+
+- **G1 - Avaliação de Riscos (25 perguntas):** Controle sanitário, quarentena, protocolos de entrada de animais
+- **G2 - Equipamentos e Veículos (13 perguntas):** Manutenção de equipamentos, controle de acesso, biossegurança
+- **G3 - Qualidade da Água (13 perguntas):** Monitoramento, tratamento e controle da qualidade da água
+- **G4 - Gerenciamento de Riscos (34 perguntas):** Manejo, alimentação, controle de pragas e mortalidade
+
+## Análise Estatística
+
+As análises incluíram:
+
+- **Estatísticas descritivas:** frequências, percentuais e medidas de tendência central
+- **Análises comparativas:** comparação entre grupos e propriedades
+- **Testes de independência:** Qui-quadrado para avaliar associações
+- **ANOVA:** comparação de médias entre grupos
+- **Identificação de padrões críticos:** perguntas e propriedades com baixa conformidade
+
+```{r dados-overview}
+# Verificação da estrutura dos dados
+cat("Estrutura dos dados:\n")
+# str(df)
+cat("[SUBSTITUA PELOS SEUS DADOS]\n")
+
+# Resumo básico
+cat("\nResumo dos dados:\n")
+cat("Total de observações: [XXX]\n")
+cat("Número de entrevistados: [5]\n") 
+cat("Número de grupos: [4]\n")
+cat("Total de perguntas: G1=25, G2=13, G3=13, G4=34\n")
+```
+
+# Análise Descritiva Geral
+
+## Distribuição Global das Respostas
+
+A análise inicial revela a distribuição geral das respostas across todas as propriedades e grupos de perguntas.
+
+```{r distribuicao-geral}
+# Gráfico de distribuição geral
+# [CÓDIGO PARA CRIAR O GRÁFICO]
+
+# Tabela de distribuição
+cat("Distribuição de Respostas:\n")
+cat("Sim: XXX (XX%)\n")
+cat("Não: XXX (XX%)\n") 
+cat("NA: XXX (XX%)\n")
+```
+
+**Interpretação:** A distribuição geral das respostas indica [PREENCHA COM INTERPRETAÇÃO]. Um percentual elevado de respostas "Sim" sugere boa conformidade geral, enquanto a presença de "NA" pode indicar práticas não aplicáveis ou ausência de informação.
+
+## Perguntas por Grupo
+
+```{r perguntas-grupo, results='asis'}
+# Tabela com número de perguntas por grupo
+perguntas_grupo <- data.frame(
+  Grupo = c("G1 - Avaliação de Riscos", "G2 - Equipamentos e Veículos", 
+            "G3 - Qualidade da Água", "G4 - Gerenciamento de Riscos"),
+  Perguntas = c(25, 13, 13, 34),
+  Percentual = c("29.4%", "15.3%", "15.3%", "40.0%")
+)
+
+kable(perguntas_grupo, 
+      caption = "Distribuição de perguntas por grupo temático",
+      align = c('l', 'c', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+# Análise por Grupos Temáticos
+
+## Conformidade por Grupo
+
+```{r conformidade-grupos}
+# Gráfico de conformidade por grupo
+# [CÓDIGO PARA CRIAR O GRÁFICO]
+```
+
+**Análise dos Resultados por Grupo:**
+
+### G1 - Avaliação de Riscos (XX%)
+**[PREENCHA COM OS RESULTADOS]**
+
+Este grupo avalia práticas fundamentais de controle sanitário, incluindo restrição de movimentação, acompanhamento veterinário, monitoramento de doenças e protocolos de quarentena. 
+
+*Pontos fortes identificados:* [LISTE OS PONTOS]
+*Áreas de melhoria:* [LISTE AS ÁREAS]
+
+### G2 - Equipamentos e Veículos (XX%)
+**[PREENCHA COM OS RESULTADOS]**
+
+Engloba manutenção de equipamentos, controle de acesso e medidas de biossegurança para visitantes e veículos.
+
+*Pontos fortes identificados:* [LISTE OS PONTOS]
+*Áreas de melhoria:* [LISTE AS ÁREAS]
+
+### G3 - Qualidade da Água (XX%)
+**[PREENCHA COM OS RESULTADOS]**
+
+Foca no monitoramento e controle da qualidade da água, incluindo parâmetros físico-químicos e medidas de desinfecção.
+
+*Pontos fortes identificados:* [LISTE OS PONTOS]
+*Áreas de melhoria:* [LISTE AS ÁREAS]
+
+### G4 - Gerenciamento de Riscos (XX%)
+**[PREENCHA COM OS RESULTADOS]**
+
+Abrange aspectos operacionais como manejo, alimentação, controle de pragas, mortalidade e procedimentos de manutenção.
+
+*Pontos fortes identificados:* [LISTE OS PONTOS]
+*Áreas de melhoria:* [LISTE AS ÁREAS]
+
+```{r tabela-conformidade-grupos, results='asis'}
+# Tabela detalhada de conformidade por grupo
+conformidade_detalhada <- data.frame(
+  Grupo = c("G1 - Avaliação de Riscos", "G2 - Equipamentos e Veículos", 
+            "G3 - Qualidade da Água", "G4 - Gerenciamento de Riscos"),
+  `Conformidade (%)` = c("XX", "XX", "XX", "XX"),
+  `Respostas Sim` = c("XX", "XX", "XX", "XX"),
+  `Respostas Não` = c("XX", "XX", "XX", "XX"),
+  `Respostas NA` = c("XX", "XX", "XX", "XX"),
+  check.names = FALSE
+)
+
+kable(conformidade_detalhada,
+      caption = "Detalhamento da conformidade por grupo temático",
+      align = c('l', 'c', 'c', 'c', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  row_spec(which.max(as.numeric(gsub("XX", "0", conformidade_detalhada$`Conformidade (%)`[1:4]))), 
+           background = "#d4edda") %>%
+  row_spec(which.min(as.numeric(gsub("XX", "0", conformidade_detalhada$`Conformidade (%)`[1:4]))), 
+           background = "#f8d7da")
+```
+
+# Análise por Propriedades
+
+## Ranking de Conformidade
+
+```{r ranking-propriedades}
+# Gráfico de ranking das propriedades
+# [CÓDIGO PARA CRIAR O GRÁFICO]
+```
+
+**Análise Individual das Propriedades:**
+
+### Propriedade A (XX%)
+**[PREENCHA COM ANÁLISE ESPECÍFICA]**
+
+**Pontos fortes:** [LISTE]
+**Pontos fracos:** [LISTE]
+**Recomendações:** [LISTE]
+
+### Propriedade B (XX%)
+**[PREENCHA COM ANÁLISE ESPECÍFICA]**
+
+**Pontos fortes:** [LISTE]
+**Pontos fracos:** [LISTE]
+**Recomendações:** [LISTE]
+
+### Propriedade C (XX%)
+**[PREENCHA COM ANÁLISE ESPECÍFICA]**
+
+**Pontos fortes:** [LISTE]
+**Pontos fracos:** [LISTE]
+**Recomendações:** [LISTE]
+
+### Propriedade D (XX%)
+**[PREENCHA COM ANÁLISE ESPECÍFICA]**
+
+**Pontos fortes:** [LISTE]
+**Pontos fracos:** [LISTE]
+**Recomendações:** [LISTE]
+
+### Propriedade E (XX%)
+**[PREENCHA COM ANÁLISE ESPECÍFICA]**
+
+**Pontos fortes:** [LISTE]
+**Pontos fracos:** [LISTE]
+**Recomendações:** [LISTE]
+
+```{r tabela-propriedades, results='asis'}
+# Tabela de ranking das propriedades
+ranking_propriedades <- data.frame(
+  Posição = 1:5,
+  Propriedade = c("Propriedade X", "Propriedade Y", "Propriedade Z", "Propriedade W", "Propriedade K"),
+  `Conformidade (%)` = c("XX", "XX", "XX", "XX", "XX"),
+  `Melhor Grupo` = c("GX", "GX", "GX", "GX", "GX"),
+  `Pior Grupo` = c("GX", "GX", "GX", "GX", "GX"),
+  check.names = FALSE
+)
+
+kable(ranking_propriedades,
+      caption = "Ranking de conformidade das propriedades",
+      align = c('c', 'l', 'c', 'c', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  row_spec(1, background = "#d4edda", bold = TRUE) %>%
+  row_spec(5, background = "#f8d7da")
+```
+
+# Análise Cruzada: Propriedades vs Grupos
+
+## Mapa de Calor da Conformidade
+
+```{r heatmap-conformidade}
+# Heatmap mostrando conformidade por propriedade e grupo
+# [CÓDIGO PARA CRIAR O GRÁFICO]
+```
+
+Esta visualização permite identificar rapidamente:
+
+- **Áreas verdes:** Alta conformidade (>80%)
+- **Áreas amarelas:** Conformidade moderada (50-80%)  
+- **Áreas vermelhas:** Baixa conformidade (<50%)
+
+## Perfis de Conformidade
+
+```{r perfis-conformidade}
+# Gráfico de linhas mostrando perfil de cada propriedade
+# [CÓDIGO PARA CRIAR O GRÁFICO]
+```
+
+**Interpretação dos Perfis:**
+
+**[PREENCHA COM INTERPRETAÇÕES ESPECÍFICAS]**
+
+- **Propriedades com perfil consistente:** [LISTE]
+- **Propriedades com alta variabilidade:** [LISTE]
+- **Padrões identificados:** [DESCREVA]
+
+```{r tabela-cruzada, results='asis'}
+# Tabela cruzada detalhada
+tabela_cruzada <- data.frame(
+  Propriedade = c("Propriedade A", "Propriedade B", "Propriedade C", "Propriedade D", "Propriedade E"),
+  G1 = c("XX%", "XX%", "XX%", "XX%", "XX%"),
+  G2 = c("XX%", "XX%", "XX%", "XX%", "XX%"),
+  G3 = c("XX%", "XX%", "XX%", "XX%", "XX%"),
+  G4 = c("XX%", "XX%", "XX%", "XX%", "XX%")
+)
+
+kable(tabela_cruzada,
+      caption = "Conformidade por propriedade e grupo (%)",
+      align = c('l', 'c', 'c', 'c', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+# Análises Estatísticas
+
+## Testes de Independência
+
+### Teste Qui-quadrado: Grupos vs Respostas
+
+```{r teste-qui-grupos}
+# Resultados do teste qui-quadrado
+cat("Teste Qui-quadrado - Grupos vs Respostas:\n")
+cat("χ² = XXX, gl = X, p-valor = X.XXX\n")
+cat("\n[PREENCHA COM INTERPRETAÇÃO]\n")
+```
+
+**Interpretação:** [PREENCHA COM A INTERPRETAÇÃO DO TESTE]
+
+### Teste Qui-quadrado: Propriedades vs Respostas
+
+```{r teste-qui-propriedades}
+# Resultados do teste qui-quadrado para propriedades
+cat("Teste Qui-quadrado - Propriedades vs Respostas:\n")
+cat("χ² = XXX, gl = X, p-valor = X.XXX\n")
+cat("\n[PREENCHA COM INTERPRETAÇÃO]\n")
+```
+
+**Interpretação:** [PREENCHA COM A INTERPRETAÇÃO DO TESTE]
+
+## ANOVA: Comparação entre Grupos
+
+```{r anova-grupos}
+# Resultados da ANOVA
+cat("ANOVA - Diferenças entre grupos:\n")
+cat("F = XXX, gl = X, p-valor = X.XXX\n")
+cat("\n[PREENCHA COM INTERPRETAÇÃO]\n")
+```
+
+**Interpretação:** [PREENCHA COM A INTERPRETAÇÃO DA ANOVA]
+
+### Teste Post-hoc (Tukey HSD)
+
+**[SE APLICÁVEL, PREENCHA COM OS RESULTADOS DO TESTE TUKEY]**
+
+```{r tukey-results}
+cat("Comparações múltiplas (Tukey HSD):\n")
+cat("[PREENCHA COM OS RESULTADOS SE p < 0.05 na ANOVA]\n")
+```
+
+# Identificação de Pontos Críticos
+
+## Perguntas com Baixa Conformidade
+
+```{r perguntas-criticas, results='asis'}
+# Tabela de perguntas críticas
+perguntas_criticas <- data.frame(
+  Grupo = c("GX", "GY", "GZ"),
+  Pergunta = c("PX", "PY", "PZ"), 
+  `Descrição` = c("Descrição da pergunta crítica 1", 
+                  "Descrição da pergunta crítica 2",
+                  "Descrição da pergunta crítica 3"),
+  `Taxa Problemática (%)` = c("XX", "XX", "XX"),
+  check.names = FALSE
+)
+
+kable(perguntas_criticas,
+      caption = "Perguntas com maior taxa de não conformidade",
+      align = c('c', 'c', 'l', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  column_spec(4, background = "#f8d7da")
+```
+
+**Análise das Perguntas Críticas:**
+
+**[PREENCHA COM ANÁLISE DETALHADA DAS PERGUNTAS MAIS PROBLEMÁTICAS]**
+
+## Propriedades com Baixa Conformidade Geral
+
+```{r propriedades-criticas}
+cat("Propriedades com conformidade <70%:\n")
+cat("[PREENCHA COM AS PROPRIEDADES IDENTIFICADAS]\n")
+```
+
+# Variabilidade e Consistência
+
+## Análise de Variabilidade
+
+```{r boxplot-variabilidade}
+# Box plots mostrando variabilidade
+# [CÓDIGO PARA CRIAR O GRÁFICO]
+```
+
+**Interpretação da Variabilidade:**
+
+- **Desvio padrão entre propriedades:** XX%
+- **Grupo mais consistente:** GX (menor variabilidade)
+- **Grupo menos consistente:** GX (maior variabilidade)
+
+**[PREENCHA COM INTERPRETAÇÕES ADICIONAIS]**
+
+# Recomendações e Plano de Ação
+
+## Recomendações Gerais
+
+Com base nos resultados da análise, as seguintes recomendações são propostas:
+
+### Curto Prazo (0-6 meses)
+
+**[PREENCHA COM RECOMENDAÇÕES ESPECÍFICAS]**
+
+1. **Prioridade Alta:** [DESCREVA]
+2. **Prioridade Alta:** [DESCREVA]
+3. **Prioridade Média:** [DESCREVA]
+
+### Médio Prazo (6-18 meses)
+
+**[PREENCHA COM RECOMENDAÇÕES ESPECÍFICAS]**
+
+1. [DESCREVA]
+2. [DESCREVA]
+3. [DESCREVA]
+
+### Longo Prazo (18+ meses)
+
+**[PREENCHA COM RECOMENDAÇÕES ESPECÍFICAS]**
+
+1. [DESCREVA]
+2. [DESCREVA]
+
+## Plano de Monitoramento
+
+**[PREENCHA COM PLANO DE MONITORAMENTO]**
+
+- **Frequência de avaliação:** [DEFINA]
+- **Indicadores-chave:** [LISTE]
+- **Responsáveis:** [DEFINA]
+- **Metas de melhoria:** [ESTABELEÇA]
+
+# Conclusões
+
+## Principais Achados
+
+**[PREENCHA COM AS PRINCIPAIS CONCLUSÕES]**
+
+1. **Conformidade Geral:** A análise revelou uma conformidade geral de XX%, indicando [INTERPRETAÇÃO]
+
+2. **Desempenho por Grupos:** O grupo [GX] apresentou melhor desempenho (XX%), enquanto [GY] mostrou maior necessidade de melhorias (XX%)
+
+3. **Variabilidade entre Propriedades:** [DESCREVA A VARIABILIDADE ENCONTRADA]
+
+4. **Pontos Críticos Identificados:** [LISTE OS PRINCIPAIS PONTOS]
+
+## Implicações para o Setor
+
+**[PREENCHA COM IMPLICAÇÕES MAIS AMPLAS]**
+
+Os resultados desta análise têm implicações importantes para:
+
+- **Gestão de riscos:** [DESCREVA]
+- **Políticas de biossegurança:** [DESCREVA]  
+- **Capacitação técnica:** [DESCREVA]
+- **Regulamentação setorial:** [DESCREVA]
+
+## Limitações do Estudo
+
+**[PREENCHA COM LIMITAÇÕES IDENTIFICADAS]**
+
+- [LISTE AS LIMITAÇÕES]
+- [SUGGESTIONS PARA ESTUDOS FUTUROS]
+
+---
+
+## Informações Técnicas
+
+**Análise realizada em:** `r Sys.Date()`  
+**Software utilizado:** R versão `r R.version.string`  
+**Pacotes principais:** tidyverse, ggplot2, knitr, kableExtra  
+
+## Contato
+
+Para questões sobre esta análise, entre em contato:  
+**Email:** [seu_email@dominio.com]  
+**Telefone:** [seu_telefone]
