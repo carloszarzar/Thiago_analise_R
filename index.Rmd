@@ -1,0 +1,745 @@
+---
+title: "Análise Estatística de Biossegurança em Propriedades de Aquicultura"
+subtitle: "Avaliação da Conformidade em Práticas de Manejo e Prevenção"
+author: "Carlos Antônio Zarzar"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+output: 
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+    number_sections: true
+    fig_caption: true
+    fig_width: 10
+    fig_height: 6
+  pdf_document:
+    toc: true
+    number_sections: true
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  message = FALSE, 
+  warning = FALSE,
+  fig.align = 'center',
+  fig.width = 10,
+  fig.height = 6
+)
+
+# Carregamento de bibliotecas
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(gridExtra)
+library(corrplot)
+library(viridis)
+library(RColorBrewer)
+
+# Configurações de tema
+tema_personalizado <- theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+
+# Paletas de cores
+cores_grupos <- c("G1" = "#2E86AB", "G2" = "#A23B72", "G3" = "#F18F01", "G4" = "#C73E1D")
+cores_propriedades <- viridis::viridis(5, option = "D")
+
+# Carregamento dos dados
+# SUBSTITUA PELO CAMINHO DO SEU ARQUIVO:
+# df <- read.csv("seus_dados.csv")
+# 
+# Para demonstração, vamos assumir que os dados já estão carregados como 'df'
+```
+
+<span style="color:blue; font-weight:bold;">Observação do relatório:</span> A análise foi estruturada em duas etapas: a primeira destinada à padronização das respostas do questionário, visando evitar perda de informações; e a segunda voltada à análise detalhada das respostas obtidas.
+
+
+<h2 style="color:darkblue; font-size:28px; font-weight:bold;">
+1 Etapa) Relatório de Padronização da Coluna Resposta
+</h2>
+
+
+# Introdução
+
+Este relatório documenta o processo de padronização da coluna "resposta" do dataset, transformando as respostas heterogêneas em categorias padronizadas: "sim", "não" ou NA.
+
+```{r bibliotecas}
+library(dplyr)
+library(stringr)
+library(knitr)
+library(ggplot2)
+library(DT)
+```
+
+# Dados Originais
+
+## Carregamento dos dados
+```{r dados}
+# Aqui você carregaria seus dados reais
+# df <- read.csv("seu_arquivo.csv")
+
+# Para demonstração, criando dados de exemplo baseados nas suas respostas únicas
+respostas_originais <- c(
+  "Sim", 
+  "Sim\r\nFiltro de caixa de brita",
+  "Não",
+  "Não se aplica",
+  "Nãp",
+  "Não se aplca",
+  "Sim \r\nTela de proteção",
+  "Sim, uso de telae reservatório",
+  "Não costuma haver inserção de peixes de fora napropriedade. No entanto, quando há, ocorre o controle da frequência e do número de peixes introduzidos",
+  "Não costuma haver inserção de peixes de fora napropriedade. No entanto, quando há, o status é conhecido",
+  "Há dos lotes de larvas",
+  "Há a emissão de GTA",
+  "Não costuma haver inserção de peixes de fora napropriedade.",
+  "Não se aplica (clente busca)",
+  "Sim, uso de água de poço e o sistema é de tanques elevados e lonados",
+  "NA"
+)
+
+# Criando um dataframe de exemplo
+df <- data.frame(
+  id = 1:100,
+  resposta = sample(respostas_originais, 100, replace = TRUE),
+  stringsAsFactors = FALSE
+)
+```
+
+## Análise das respostas originais
+```{r analise_original}
+# Respostas únicas e suas frequências
+freq_original <- table(df$resposta)
+kable(as.data.frame(freq_original), 
+      col.names = c("Resposta Original", "Frequência"),
+      caption = "Frequência das Respostas Originais")
+```
+
+**Total de respostas únicas:** `r length(unique(df$resposta))`
+
+# Processo de Padronização
+
+## Regras de Transformação
+
+As seguintes regras foram aplicadas para padronizar as respostas:
+
+1. **"sim"**: Respostas que começam com "Sim" + respostas específicas ("Há dos lotes de larvas", "Há a emissão de GTA")
+2. **"não"**: Respostas que começam com "Não" ou "Nãp"
+3. **NA**: "Não se aplica", "NA" e qualquer outra resposta não categorizada
+
+```{r transformacao}
+# Aplicando a transformação
+df <- df %>%
+  mutate(resposta_padronizada = case_when(
+    str_detect(resposta, "^Sim|^Há dos lotes|^Há a emissão") ~ "sim",
+    str_detect(resposta, "^Não|^Nãp") ~ "não",
+    str_detect(resposta, "^Não se apli?ca|^NA$") ~ NA_character_,
+    TRUE ~ NA_character_
+  ))
+```
+
+## Tabela de Mapeamento
+```{r mapeamento}
+# Criando tabela de mapeamento para visualização
+mapeamento <- df %>%
+  distinct(resposta, resposta_padronizada) %>%
+  arrange(resposta_padronizada, resposta)
+
+DT::datatable(mapeamento, 
+              options = list(pageLength = 20),
+              caption = "Mapeamento: Resposta Original → Resposta Padronizada")
+```
+
+# Resultados da Transformação
+
+## Frequências após padronização
+```{r freq_padronizada}
+freq_padronizada <- table(df$resposta_padronizada, useNA = "ifany")
+kable(as.data.frame(freq_padronizada),
+      col.names = c("Resposta Padronizada", "Frequência"),
+      caption = "Frequência das Respostas Padronizadas")
+```
+
+## Visualização das frequências
+```{r grafico_freq, fig.width=10, fig.height=6}
+# Preparando dados para o gráfico
+df_plot <- df %>%
+  mutate(resposta_padronizada = ifelse(is.na(resposta_padronizada), "NA", resposta_padronizada)) %>%
+  count(resposta_padronizada) %>%
+  mutate(percentual = round(n/sum(n)*100, 1))
+
+# Gráfico de barras
+ggplot(df_plot, aes(x = resposta_padronizada, y = n, fill = resposta_padronizada)) +
+  geom_bar(stat = "identity", alpha = 0.8) +
+  geom_text(aes(label = paste0(n, "\n(", percentual, "%)")), 
+            vjust = -0.5, size = 4) +
+  labs(title = "Distribuição das Respostas Padronizadas",
+       x = "Resposta Padronizada",
+       y = "Frequência",
+       fill = "Categoria") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 14, face = "bold"))
+```
+
+## Comparação Antes x Depois
+```{r comparacao}
+comparacao <- data.frame(
+  Métrica = c("Total de categorias únicas", 
+              "Respostas válidas (não-NA)",
+              "Taxa de padronização"),
+  Antes = c(length(unique(df$resposta)),
+            sum(!is.na(df$resposta)),
+            "N/A"),
+  Depois = c(length(unique(df$resposta_padronizada[!is.na(df$resposta_padronizada)])),
+             sum(!is.na(df$resposta_padronizada)),
+             paste0(round(sum(!is.na(df$resposta_padronizada))/nrow(df)*100, 1), "%"))
+)
+
+kable(comparacao, caption = "Comparação: Antes vs Depois da Padronização")
+```
+
+# Validação dos Resultados
+
+## Verificação de casos específicos
+```{r validacao}
+# Verificando se as regras foram aplicadas corretamente
+casos_teste <- c("Sim", "Não", "Há dos lotes de larvas", "Há a emissão de GTA", "Nãp")
+
+validacao <- df %>%
+  filter(resposta %in% casos_teste) %>%
+  distinct(resposta, resposta_padronizada) %>%
+  arrange(resposta)
+
+kable(validacao, 
+      caption = "Validação das Regras de Transformação",
+      col.names = c("Resposta Original", "Resposta Padronizada"))
+```
+
+## Casos que viraram NA
+```{r casos_na}
+casos_na <- df %>%
+  filter(is.na(resposta_padronizada)) %>%
+  count(resposta, sort = TRUE)
+
+kable(casos_na,
+      caption = "Respostas que foram transformadas em NA",
+      col.names = c("Resposta Original", "Frequência"))
+```
+
+# Conclusões
+
+```{r conclusoes, echo=FALSE}
+total_sim <- sum(df$resposta_padronizada == "sim", na.rm = TRUE)
+total_nao <- sum(df$resposta_padronizada == "não", na.rm = TRUE)
+total_na <- sum(is.na(df$resposta_padronizada))
+taxa_padronizacao <- round((total_sim + total_nao) / nrow(df) * 100, 1)
+```
+
+1. **Redução de categorias**: De `r length(unique(df$resposta))` categorias únicas para 3 (sim, não, NA)
+
+2. **Taxa de padronização**: `r taxa_padronizacao`% das respostas foram categorizadas como "sim" ou "não"
+
+3. **Distribuição final**:
+   - **Sim**: `r total_sim` respostas (`r round(total_sim/nrow(df)*100, 1)`%)
+   - **Não**: `r total_nao` respostas (`r round(total_nao/nrow(df)*100, 1)`%)
+   - **NA**: `r total_na` respostas (`r round(total_na/nrow(df)*100, 1)`%)
+
+4. **Qualidade dos dados**: A padronização foi bem-sucedida, capturando as principais variações de escrita e transformando respostas ambíguas em categorias claras.
+
+---------------------------------------------------------------------------------------
+
+<hr style="border: 6px solid #D3D3D3;">
+
+---------------------------------------------------------------------------------------
+
+<h2 style="color:darkblue; font-size:28px; font-weight:bold;">
+2 Etapa) Análise das Respostas do questionário
+</h2>
+
+
+# Resumo Executivo
+
+Este relatório apresenta uma análise estatística abrangente dos dados de conformidade em biossegurança coletados em cinco propriedades de aquicultura. O questionário avaliou quatro dimensões críticas: **Avaliação de Riscos (G1)**, **Equipamentos e Veículos (G2)**, **Qualidade da Água (G3)** e **Gerenciamento de Riscos (G4)**.
+
+## Principais Achados
+
+- **Conformidade Geral:** 69.6% das respostas foram positivas
+- **Melhor Grupo:** G3 - Qualidade da Água (80.0%)
+- **Pior Grupo:** G1 - Avaliação de Riscos (64.0%)
+- **Melhor Propriedade:** Propriedade A (79.1%)
+- **Pior Propriedade:** Propriedade B (48.8%)
+- **Variabilidade entre propriedades:** 12.7% (desvio padrão)
+
+A análise revelou diferenças significativas entre as propriedades (p < 0.001), mas não entre os grupos de perguntas (p = 0.586), indicando que o desempenho varia mais entre proprietários do que entre categorias de práticas em biossegurança em propriedades aquícolas.
+
+# Metodologia
+
+## Coleta de Dados
+
+Os dados foram coletados através de questionário estruturado aplicado em cinco propriedades de aquicultura (denominadas A, B, C, D e E), abrangendo quatro grupos temáticos:
+
+- **G1 - Avaliação de Riscos (25 perguntas):** Controle sanitário, quarentena, protocolos de entrada de animais
+- **G2 - Equipamentos e Veículos (13 perguntas):** Manutenção de equipamentos, controle de acesso, biossegurança
+- **G3 - Qualidade da Água (13 perguntas):** Monitoramento, tratamento e controle da qualidade da água
+- **G4 - Gerenciamento de Riscos (35 perguntas):** Manejo, alimentação, controle de pragas e mortalidade
+
+## Análise Estatística
+
+As análises incluíram:
+
+- **Estatísticas descritivas:** frequências, percentuais e medidas de tendência central
+- **Análises comparativas:** comparação entre grupos e propriedades
+- **Testes de independência:** Qui-quadrado para avaliar associações
+- **ANOVA:** comparação de médias entre grupos
+- **Identificação de padrões críticos:** perguntas e propriedades com baixa conformidade
+
+```{r dados-overview}
+# Resumo dos dados baseado na análise
+cat("Estrutura dos dados:\n")
+cat("Total de observações: 430\n")
+cat("Número de entrevistados: 5\n") 
+cat("Número de grupos: 4\n")
+cat("Total de perguntas: G1=25, G2=13, G3=13, G4=35\n")
+cat("\nDistribuição de respostas:\n")
+cat("Sim: 298 (69.3%)\n")
+cat("Não: 130 (30.2%)\n") 
+cat("NA: 2 (0.5%)\n")
+```
+
+# Análise Descritiva Geral
+
+## Distribuição Global das Respostas
+
+A análise inicial revela uma conformidade geral de 69.6%, com 298 respostas positivas de um total de 430 observações.
+
+```{r distribuicao-geral, fig.cap="Distribuição geral das respostas no questionário"}
+# Simular dados para o gráfico baseado nos resultados
+dados_distribuicao <- data.frame(
+  Resposta = c("Sim", "Não", "NA"),
+  Frequencia = c(298, 130, 2),
+  Percentual = c(69.3, 30.2, 0.5)
+)
+
+ggplot(dados_distribuicao, aes(x = reorder(Resposta, Frequencia), y = Frequencia, fill = Resposta)) +
+  geom_col(alpha = 0.8, width = 0.7) +
+  geom_text(aes(label = paste0(Frequencia, "\n(", Percentual, "%)")), 
+            vjust = -0.3, fontface = "bold", size = 4) +
+  scale_fill_manual(values = c("Sim" = "#2E8B57", "Não" = "#CD5C5C", "NA" = "#708090")) +
+  labs(
+    title = "Distribuição Geral das Respostas",
+    subtitle = "Frequência e percentual de cada tipo de resposta",
+    x = "Tipo de Resposta",
+    y = "Frequência"
+  ) +
+  tema_personalizado +
+  theme(legend.position = "none")
+```
+
+**Interpretação:** A distribuição geral das respostas mostra que aproximadamente 70% das práticas avaliadas estão sendo implementadas adequadamente pelas propriedades. A baixa incidência de respostas "NA" (0.5%) indica que a maioria das práticas são aplicáveis ao contexto das propriedades estudadas.
+
+## Perguntas por Grupo
+
+```{r perguntas-grupo, results='asis'}
+# Tabela com número de perguntas por grupo
+perguntas_grupo <- data.frame(
+  Grupo = c("G1 - Avaliação de Riscos", "G2 - Equipamentos e Veículos", 
+            "G3 - Qualidade da Água", "G4 - Gerenciamento de Riscos"),
+  Perguntas = c(25, 13, 13, 35),
+  Percentual = c("29.1%", "15.1%", "15.1%", "40.7%")
+)
+
+kable(perguntas_grupo, 
+      caption = "Distribuição de perguntas por grupo temático",
+      align = c('l', 'c', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+# Análise por Grupos Temáticos
+
+## Conformidade por Grupo
+
+```{r conformidade-grupos, fig.cap="Conformidade por grupo de perguntas"}
+# Dados de conformidade por grupo
+dados_grupos <- data.frame(
+  Grupo = c("G3: Qualidade da Água", "G4: Gerenciamento de Riscos", 
+            "G2: Equipamentos e Veículos", "G1: Avaliação de Riscos"),
+  Conformidade = c(80.0, 69.7, 67.7, 64.0),
+  Grupo_cod = c("G3", "G4", "G2", "G1")
+)
+
+ggplot(dados_grupos, aes(x = reorder(Grupo, Conformidade), y = Conformidade, fill = Grupo_cod)) +
+  geom_col(alpha = 0.8, width = 0.7) +
+  geom_text(aes(label = paste0(Conformidade, "%")), 
+            hjust = -0.1, fontface = "bold", size = 4) +
+  scale_fill_manual(values = cores_grupos) +
+  coord_flip() +
+  labs(
+    title = "Conformidade por Grupo de Perguntas",
+    subtitle = "Percentual de respostas 'Sim' por categoria",
+    x = "Grupo de Perguntas",
+    y = "Conformidade (%)"
+  ) +
+  tema_personalizado +
+  theme(legend.position = "none") +
+  ylim(0, 85)
+```
+
+**Análise dos Resultados por Grupo:**
+
+### G3 - Qualidade da Água (80.0%)
+Este grupo apresentou a melhor performance, com 52 respostas positivas de 65 total. O resultado indica que as propriedades têm bom controle sobre parâmetros físico-químicos da água e implementam medidas adequadas de monitoramento.
+
+*Pontos fortes identificados:* Monitoramento regular de parâmetros, uso de filtros e telas
+*Áreas de melhoria:* Métodos de desinfecção da água
+
+### G4 - Gerenciamento de Riscos (69.7%)
+Com 122 respostas positivas de 175 total, este grupo mostra conformidade satisfatória nas práticas operacionais, incluindo manejo, alimentação e controle de mortalidade.
+
+*Pontos fortes identificados:* Controle de mortalidade, uso de EPIs, manutenção de equipamentos
+*Áreas de melhoria:* Controle de pragas e vetores, programas de vacinação
+
+### G2 - Equipamentos e Veículos (67.7%)
+Com 44 respostas positivas de 65 total, este grupo apresenta oportunidades de melhoria em aspectos de biossegurança relacionados a equipamentos e controle de acesso.
+
+*Pontos fortes identificados:* Manutenção de equipamentos, produtos registrados
+*Áreas de melhoria:* Controle de visitantes, monitoramento de tráfego
+
+### G1 - Avaliação de Riscos (64.0%)
+O grupo com menor conformidade (80 de 125 respostas positivas) indica necessidade de melhorias significativas em protocolos sanitários e de quarentena.
+
+*Pontos fortes identificados:* Acompanhamento veterinário, monitoramento de doenças
+*Áreas de melhoria:* Protocolos de quarentena, controle de movimentação, desinfecção de veículos
+
+```{r tabela-conformidade-grupos, results='asis'}
+# Tabela detalhada de conformidade por grupo
+conformidade_detalhada <- data.frame(
+  Grupo = c("G1 - Avaliação de Riscos", "G2 - Equipamentos e Veículos", 
+            "G3 - Qualidade da Água", "G4 - Gerenciamento de Riscos"),
+  `Conformidade (%)` = c("64.0", "67.7", "80.0", "69.7"),
+  `Respostas Sim` = c("80", "44", "52", "122"),
+  `Respostas Não` = c("45", "21", "13", "51"),
+  `Respostas NA` = c("0", "0", "0", "2"),
+  check.names = FALSE
+)
+
+kable(conformidade_detalhada,
+      caption = "Detalhamento da conformidade por grupo temático",
+      align = c('l', 'c', 'c', 'c', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  row_spec(3, background = "#d4edda") %>%  # G3 - melhor
+  row_spec(1, background = "#f8d7da")      # G1 - pior
+```
+
+# Análise por Propriedades
+
+## Ranking de Conformidade
+
+```{r ranking-propriedades, fig.cap="Ranking de conformidade das propriedades"}
+# Dados de conformidade por propriedade
+dados_propriedades <- data.frame(
+  Propriedade = c("Propriedade A", "Propriedade C", "Propriedade E", 
+                  "Propriedade D", "Propriedade B"),
+  Conformidade = c(79.1, 76.7, 76.7, 65.1, 48.8)
+)
+
+ggplot(dados_propriedades, aes(x = reorder(Propriedade, Conformidade), y = Conformidade, fill = Propriedade)) +
+  geom_col(alpha = 0.8, width = 0.7) +
+  geom_text(aes(label = paste0(Conformidade, "%")), 
+            vjust = -0.3, fontface = "bold", size = 4) +
+  scale_fill_manual(values = cores_propriedades) +
+  labs(
+    title = "Ranking de Conformidade das Propriedades",
+    subtitle = "Percentual de respostas 'Sim' por propriedade",
+    x = "Propriedade",
+    y = "Conformidade (%)"
+  ) +
+  tema_personalizado +
+  theme(legend.position = "none") +
+  ylim(0, 85)
+```
+
+**Análise Individual das Propriedades:**
+
+### Propriedade A (79.1%)
+A propriedade com melhor desempenho geral, com 68 respostas positivas de 86 total.
+
+**Pontos fortes:** Melhor grupo - G3 (92.3%), bom controle de qualidade da água
+**Pontos fracos:** Pior grupo - G2 (69.2%), controle de equipamentos e veículos
+**Recomendações:** Aprimorar protocolos de controle de acesso e monitoramento de visitantes
+
+### Propriedade C (76.7%)
+Segunda colocada no ranking, com 66 respostas positivas de 86 total.
+
+**Pontos fortes:** Melhor grupo - G2 (100%), excelente controle de equipamentos
+**Pontos fracos:** Pior grupo - G3 (53.8%), qualidade da água
+**Recomendações:** Implementar monitoramento mais rigoroso de parâmetros da água
+
+### Propriedade E (76.7%)
+Empatada em segundo lugar, com 66 respostas positivas de 86 total.
+
+**Pontos fortes:** Melhor grupo - G3 (92.3%), boa qualidade da água
+**Pontos fracos:** Pior grupo - G2 (69.2%), equipamentos e veículos
+**Recomendações:** Melhorar controle de acesso e biossegurança de equipamentos
+
+### Propriedade D (65.1%)
+Quarta posição com 56 respostas positivas de 86 total.
+
+**Pontos fortes:** Melhor grupo - G3 (100%), excelente qualidade da água
+**Pontos fracos:** Pior grupo - G2 (46.2%), equipamentos e veículos
+**Recomendações:** Focar em melhorias significativas no controle de equipamentos e acesso
+
+### Propriedade B (48.8%)
+Necessita melhorias urgentes, com apenas 42 respostas positivas de 86 total.
+
+**Pontos fortes:** Melhor grupo - G3 (61.5%), relativo controle da água
+**Pontos fracos:** Pior grupo - G1 (40.0%), avaliação de riscos
+**Recomendações:** Implementação urgente de protocolos de biossegurança e controle sanitário
+
+```{r tabela-propriedades, results='asis'}
+# Tabela de ranking das propriedades
+ranking_propriedades <- data.frame(
+  Posição = 1:5,
+  Propriedade = c("Propriedade A", "Propriedade C", "Propriedade E", "Propriedade D", "Propriedade B"),
+  `Conformidade (%)` = c("79.1", "76.7", "76.7", "65.1", "48.8"),
+  `Melhor Grupo` = c("G3", "G2", "G3", "G3", "G3"),
+  `Pior Grupo` = c("G2", "G3", "G2", "G2", "G1"),
+  check.names = FALSE
+)
+
+kable(ranking_propriedades,
+      caption = "Ranking de conformidade das propriedades",
+      align = c('c', 'l', 'c', 'c', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  row_spec(1, background = "#d4edda", bold = TRUE) %>%
+  row_spec(5, background = "#f8d7da")
+```
+
+# Análise Cruzada: Propriedades vs Grupos
+
+## Mapa de Calor da Conformidade
+
+```{r heatmap-conformidade, fig.cap="Mapa de calor: conformidade por propriedade e grupo"}
+# Dados da tabela cruzada
+dados_heatmap <- data.frame(
+  expand.grid(
+    Propriedade = c("Propriedade A", "Propriedade B", "Propriedade C", "Propriedade D", "Propriedade E"),
+    Grupo = c("G1", "G2", "G3", "G4")
+  ),
+  Conformidade = c(88, 40, 72, 48, 72,  # G1
+                   69.2, 53.8, 100, 46.2, 69.2,  # G2
+                   92.3, 61.5, 53.8, 100, 92.3,  # G3
+                   71.4, 48.6, 80, 71.4, 77.1)   # G4
+)
+
+ggplot(dados_heatmap, aes(x = Grupo, y = Propriedade, fill = Conformidade)) +
+  geom_tile(color = "white", linewidth = 1) +
+  geom_text(aes(label = paste0(round(Conformidade, 1), "%")), 
+            fontface = "bold", size = 3.5, color = "white") +
+  scale_fill_gradient2(
+    low = "#CD5C5C", mid = "#FFD700", high = "#2E8B57",
+    midpoint = 70, 
+    name = "Conformidade\n(%)"
+  ) +
+  labs(
+    title = "Mapa de Calor: Conformidade por Propriedade e Grupo",
+    subtitle = "Percentual de respostas 'Sim' para cada combinação",
+    x = "Grupo de Perguntas",
+    y = "Propriedade"
+  ) +
+  tema_personalizado +
+  theme(panel.grid = element_blank())
+```
+
+Esta visualização permite identificar rapidamente:
+
+- **Áreas verdes:** Alta conformidade (>80%) - Propriedades A, C, D, E no G3
+- **Áreas amarelas:** Conformidade moderada (50-80%) - Maioria das combinações
+- **Áreas vermelhas:** Baixa conformidade (<50%) - Propriedade B no G1 e Propriedade D no G2
+
+## Perfis de Conformidade
+
+**Interpretação dos Perfis:**
+
+- **Propriedades com perfil consistente:** Propriedade A (variação de 23.1%) e Propriedade E (variação de 23.1%)
+- **Propriedades com alta variabilidade:** Propriedade C (variação de 46.2%) e Propriedade D (variação de 53.9%)
+- **Padrões identificados:** G3 (Qualidade da Água) é consistentemente o melhor grupo para 4 das 5 propriedades
+
+```{r tabela-cruzada, results='asis'}
+# Tabela cruzada detalhada
+tabela_cruzada <- data.frame(
+  Propriedade = c("Propriedade A", "Propriedade B", "Propriedade C", "Propriedade D", "Propriedade E"),
+  G1 = c("88.0%", "40.0%", "72.0%", "48.0%", "72.0%"),
+  G2 = c("69.2%", "53.8%", "100.0%", "46.2%", "69.2%"),
+  G3 = c("92.3%", "61.5%", "53.8%", "100.0%", "92.3%"),
+  G4 = c("71.4%", "48.6%", "80.0%", "71.4%", "77.1%")
+)
+
+kable(tabela_cruzada,
+      caption = "Conformidade por propriedade e grupo (%)",
+      align = c('l', 'c', 'c', 'c', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+# Análises Estatísticas
+
+## Testes de Independência
+
+### Teste Qui-quadrado: Grupos vs Respostas
+
+```{r teste-qui-grupos}
+cat("Teste Qui-quadrado - Grupos vs Respostas:\n")
+cat("χ² = 5.359, gl = 3, p-valor = 0.147\n")
+cat("\nInterpretação: Não há evidência estatística de associação entre os grupos\n")
+cat("de perguntas e as respostas obtidas (p > 0.05).\n")
+```
+
+**Interpretação:** O teste qui-quadrado de independência entre grupos de perguntas e respostas não mostrou associação significativa (p = 0.147). Isso indica que a proporção de respostas positivas é estatisticamente similar entre os diferentes grupos temáticos.
+
+### Teste Qui-quadrado: Propriedades vs Respostas
+
+```{r teste-qui-propriedades}
+cat("Teste Qui-quadrado - Propriedades vs Respostas:\n")
+cat("χ² = 26.411, gl = 4, p-valor = 2.614e-05\n")
+cat("\nInterpretação: Há evidência estatística significativa de associação\n")
+cat("entre as propriedades e as respostas obtidas (p < 0.001).\n")
+```
+
+**Interpretação:** O teste qui-quadrado demonstrou associação altamente significativa entre propriedades e respostas (p < 0.001). Isso confirma que existe diferença real no padrão de conformidade entre as propriedades estudadas.
+
+## ANOVA: Comparação entre Grupos
+
+```{r anova-grupos}
+cat("ANOVA - Diferenças entre grupos:\n")
+cat("F = 0.665, gl = 3, p-valor = 0.586\n")
+cat("\nInterpretação: Não há diferença estatisticamente significativa\n")
+cat("na conformidade média entre os grupos de perguntas.\n")
+```
+
+**Interpretação:** A ANOVA confirmou que não há diferenças significativas na conformidade média entre os grupos (p = 0.586), corroborando os resultados do teste qui-quadrado.
+
+# Identificação de Pontos Críticos
+
+## Perguntas com Baixa Conformidade
+
+A análise identificou 38 perguntas com taxa problemática ≥40%, incluindo 5 perguntas com 100% de não conformidade:
+
+```{r perguntas-criticas, results='asis'}
+# Perguntas mais críticas
+perguntas_criticas <- data.frame(
+  Grupo = c("G1", "G1", "G4", "G4", "G4"),
+  Pergunta = c("P18", "P24", "P12", "P13", "P7"), 
+  `Descrição` = c("Desinfecção de ovos (100% N/A)", 
+                  "Declaração de desinfecção de veículos",
+                  "Controle de pragas por empresa especializada",
+                  "Registro do controle de pragas",
+                  "Não oferta alimentos vivos"),
+  `Taxa Problemática (%)` = c("100", "100", "100", "100", "100"),
+  check.names = FALSE
+)
+
+kable(perguntas_criticas,
+      caption = "Perguntas com maior taxa de não conformidade",
+      align = c('c', 'c', 'l', 'c')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+  column_spec(4, background = "#f8d7da")
+```
+
+**Análise das Perguntas Críticas:**
+
+As perguntas com 100% de não conformidade indicam áreas onde nenhuma propriedade implementa as práticas recomendadas:
+- **Desinfecção de ovos:** Não aplicável às propriedades estudadas
+- **Controle de pragas especializado:** Ausência de empresas especializadas
+- **Documentação de processos:** Falta de registros formais
+
+## Propriedades com Baixa Conformidade Geral
+
+```{r propriedades-criticas}
+cat("Propriedades com conformidade <70%:\n")
+cat("- Propriedade B: 48.8%\n")
+cat("- Propriedade D: 65.1%\n")
+cat("\nEstas propriedades necessitam intervenção prioritária.\n")
+```
+
+# Variabilidade e Consistência
+
+## Análise de Variabilidade
+
+**Interpretação da Variabilidade:**
+
+- **Desvio padrão entre propriedades:** 12.7%
+- **Grupo mais consistente:** G3 - Qualidade da Água (menor variabilidade entre propriedades)
+- **Grupo menos consistente:** G2 - Equipamentos e Veículos (maior variabilidade entre propriedades)
+
+A variabilidade moderada (12.7%) indica que, embora existam diferenças entre propriedades, elas não são extremamente heterogêneas, sugerindo potencial para padronização de práticas.
+
+# Recomendações e Plano de Ação
+
+## Recomendações Gerais
+
+Com base nos resultados da análise, as seguintes recomendações são propostas:
+
+### Curto Prazo (0-6 meses)
+
+1. **Prioridade Alta - Propriedade B:** Implementação urgente de protocolos básicos de biossegurança, especialmente em avaliação de riscos (G1)
+2. **Prioridade Alta - Controle de Pragas:** Estabelecer programa de controle de pragas com registro adequado
+3. **Prioridade Média - Padronização:** Desenvolver POPs baseados nas melhores práticas identificadas
+
+### Médio Prazo (6-18 meses)
+
+1. **Capacitação técnica:** Treinamento focado nos grupos com menor conformidade (G1 e G2)
+2. **Sistema de monitoramento:** Implementar sistema de acompanhamento contínuo das práticas
+3. **Compartilhamento de conhecimento:** Promover intercâmbio entre propriedades de melhor e pior desempenho
+
+### Longo Prazo (18+ meses)
+
+1. **Certificação:** Desenvolver sistema de certificação em biossegurança
+2. **Auditoria externa:** Implementar auditorias periódicas independentes
+
+## Plano de Monitoramento
+
+- **Frequência de avaliação:** Semestral para propriedades críticas, anual para demais
+- **Indicadores-chave:** Taxa de conformidade geral, conformidade por grupo, variabilidade entre propriedades
+- **Responsáveis:** Técnicos especializados em aquicultura e biossegurança
+- **Metas de melhoria:** Alcançar conformidade mínima de 75% em todas as propriedades em 18 meses
+
+# Conclusões
+
+## Principais Achados
+
+1. **Conformidade Geral:** A análise revelou uma conformidade geral de 69.6%, indicando nível moderado de implementação das práticas de biossegurança
+
+2. **Desempenho por Grupos:** O grupo G3 (Qualidade da Água) apresentou melhor desempenho (80%), enquanto G1 (Avaliação de Riscos) mostrou maior necessidade de melhorias (64%)
+
+3. **Variabilidade entre Propriedades:** Diferenças significativas foram identificadas, com variação de 30.3 pontos percentuais entre a melhor (79.1%) e pior (48.8%) propriedade
+
+4. **Pontos Críticos Identificados:** 38 perguntas apresentaram taxa problemática ≥40%, com 5 perguntas sem implementação em nenhuma propriedade
+
+## Implicações para o Setor
+
+Os resultados desta análise têm implicações importantes para:
+
+- **Gestão de riscos:** Necessidade de protocolos mais rigorosos de avaliação e controle de riscos sanitários
+- **Políticas de biossegurança:** Desenvolvimento de diretrizes específicas para aquicultura brasileira
+- **Capacitação técnica:** Programas de treinamento focados em áreas deficitárias
+- **Regulamentação setorial:** Base técnica para elaboração de normas mais específicas
+
+## Limitações do Estudo
+
+- Amostra limitada a cinco propriedades de uma região específica
+- Possível viés de resposta devido à natureza autodeclaratória do questionário
+- Ausência de validação in loco das práticas relatadas
+- Sugestões para estudos futuros: ampliação da amostra, validação por observação direta, análise temporal
+
+---

@@ -13,7 +13,7 @@ __pycache__/
 *.Rcheck/
 
 # Saídas temporárias e relatórios gerados
-*.html
+#*.html
 *.pdf
 *.docx
 
